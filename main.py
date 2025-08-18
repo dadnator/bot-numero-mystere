@@ -140,7 +140,7 @@ class GameView(discord.ui.View):
         # Création des boutons de numéros
         for i in range(1, 7):
             button = discord.ui.Button(label=str(i), style=discord.ButtonStyle.secondary, custom_id=f"number_{i}")
-            button.callback = self.choose_number_callback  # Utilisation d'une nouvelle fonction de rappel
+            button.callback = self.choose_number_callback
             if i in self.chosen_numbers.values():
                 button.disabled = True
                 button.style = discord.ButtonStyle.danger
@@ -182,7 +182,9 @@ class GameView(discord.ui.View):
         
         if len(game_data['players']) >= 2:
             self.clear_items()
-            self.add_item(discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier", callback=self.join_croupier_callback))
+            join_croupier_button = discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier")
+            join_croupier_button.callback = self.join_croupier_callback
+            self.add_item(join_croupier_button)
             embed.set_footer(text="Un croupier peut maintenant lancer la partie.")
 
         await interaction.response.edit_message(embed=embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
@@ -213,7 +215,9 @@ class GameView(discord.ui.View):
         game_data["croupier"] = interaction.user
         
         self.clear_items()
-        self.add_item(discord.ui.Button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button", callback=self.start_game_button_callback))
+        start_game_button = discord.ui.Button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button")
+        start_game_button.callback = self.start_game_button_callback
+        self.add_item(start_game_button)
         
         embed = interaction.message.embeds[0]
         embed.set_field_at(1, name="Status", value=f"✅ Prêt à jouer ! Croupier : {interaction.user.mention}", inline=False)
