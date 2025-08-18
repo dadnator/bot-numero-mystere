@@ -46,6 +46,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     montant = game_data["montant"]
     players = game_data["players"]
 
+    # 1. ENVOYER LE MESSAGE DE SUSPENSE
     suspense_embed = discord.Embed(
         title="🎲 Tirage en cours...",
         description="On croise les doigts 🤞🏻 !",
@@ -55,11 +56,13 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     
     countdown_message = await interaction.channel.send(embed=suspense_embed)
 
+    # 2. METTRE À JOUR LE MESSAGE AVEC LE COMPTE À REBOURS
     for i in range(5, 0, -1):
         suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
         await countdown_message.edit(embed=suspense_embed)
         await asyncio.sleep(1)
 
+    # 3. CALCULER LE RÉSULTAT
     mystery_number = random.randint(1, 6)
     
     min_diff = 7
@@ -109,7 +112,10 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     else:
         result_embed.add_field(name="🏆 Gagnant", value="Personne n'a gagné. Le croupier empoche la mise.", inline=False)
     
+    # 4. MODIFIER LE MESSAGE POUR AFFICHER LE RÉSULTAT FINAL
     await countdown_message.edit(embed=result_embed, view=None)
+    
+    # 5. SUPPRIMER LE MESSAGE ORIGINAL
     await original_message.delete()
     
     now = datetime.utcnow()
@@ -135,10 +141,8 @@ class GameView(discord.ui.View):
         self.add_number_buttons()
 
     def add_number_buttons(self):
-        # Cette méthode est maintenant plus intelligente
         self.clear_items()
         
-        # Création des boutons de numéros
         for i in range(1, 7):
             button = discord.ui.Button(label=str(i), style=discord.ButtonStyle.secondary, custom_id=f"number_{i}")
             button.callback = self.choose_number_callback
@@ -147,20 +151,16 @@ class GameView(discord.ui.View):
                 button.style = discord.ButtonStyle.danger
             self.add_item(button)
 
-        # Ajout du bouton d'annulation
         cancel_button = discord.ui.Button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game")
         cancel_button.callback = self.cancel_game_callback
         self.add_item(cancel_button)
         
-        # Ajout conditionnel du bouton du croupier si assez de joueurs
         if len(self.chosen_numbers) >= 2 and not self.croupier:
             join_croupier_button = discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier")
             join_croupier_button.callback = self.join_croupier_callback
             self.add_item(join_croupier_button)
 
-
     async def choose_number_callback(self, interaction: discord.Interaction):
-        # Utiliser l'interaction pour obtenir le bouton qui a été cliqué
         button = next((item for item in self.children if isinstance(item, discord.ui.Button) and item.custom_id == interaction.data['custom_id']), None)
         if not button:
             return
@@ -180,7 +180,6 @@ class GameView(discord.ui.View):
         self.chosen_numbers[user_id] = number
         game_data["players"][user_id] = {"user": interaction.user, "number": number}
 
-        # On appelle la fonction de création pour mettre à jour les boutons
         self.add_number_buttons()
 
         embed = interaction.message.embeds[0]
@@ -189,8 +188,6 @@ class GameView(discord.ui.View):
         embed.set_field_at(0, name="Joueurs inscrits", value=joined_players_list if joined_players_list else "...", inline=False)
         embed.set_field_at(1, name="Status", value=f"**{len(game_data['players'])}/{self.player_count}** joueurs inscrits. En attente...", inline=False)
         
-        # Cette vérification est maintenant dans add_number_buttons()
-        # Mais on met à jour le footer pour le croupier
         if len(game_data['players']) >= 2:
             embed.set_footer(text="Un croupier peut maintenant lancer la partie.")
 
