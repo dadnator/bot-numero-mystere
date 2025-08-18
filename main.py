@@ -99,11 +99,16 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
     
     if len(winners) == 1:
-        winner_user = bot.get_user(winners[0])
+        winner_user = None
+        try:
+            winner_user = await bot.fetch_user(winners[0])
+        except discord.NotFound:
+            pass
+
         if winner_user:
             result_embed.add_field(name="🏆 Gagnant", value=f"{winner_user.mention} remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas !", inline=False)
         else:
-            result_embed.add_field(name="🏆 Gagnant", value="Gagnant non trouvé. Le croupier empoche la mise.", inline=False)
+            result_embed.add_field(name="🏆 Gagnant", value=f"<@{winners[0]}> remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas ! (Utilisateur introuvable)", inline=False)
     elif len(winners) > 1:
         mentions = " ".join([f"<@{w_id}>" for w_id in winners])
         result_embed.add_field(name="🏆 Gagnants (Égalité)", value=f"{mentions} se partagent le gain et reçoivent **{format(win_per_person, ',').replace(',', ' ')}** kamas chacun.", inline=False)
