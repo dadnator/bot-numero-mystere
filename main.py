@@ -11,9 +11,9 @@ from datetime import datetime
 # --- TOKEN ET INTENTS ---
 token = os.environ['TOKEN_BOT_DISCORD']
 
-ID_CROUPIER = 1406210029815861258
-ID_MEMBRE = 1406210131515019355
-ID_SALON_JEU = 1404445873236213820 # Remplace ID_SALON_DUEL
+ID_CROUPIER = 1401471414262829066
+ID_MEMBRE = 1366378672281620495
+ID_SALON_JEU = 1406920988993654794 # Remplace ID_SALON_DUEL
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
