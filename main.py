@@ -11,9 +11,9 @@ from datetime import datetime
 # --- TOKEN ET INTENTS ---
 token = os.environ['TOKEN_BOT_DISCORD']
 
-ID_CROUPIER = 1401471414262829066
-ID_MEMBRE = 1366378672281620495
-ID_SALON_JEU = 1406920988993654794 # Remplace ID_SALON_DUEL
+ID_CROUPIER = 1406210029815861258
+ID_MEMBRE = 1406210131515019355
+ID_SALON_JEU = 1404445873236213820 # Remplace ID_SALON_DUEL
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
@@ -60,7 +60,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     countdown_message = await interaction.channel.send(embed=suspense_embed)
 
     # 3. Compte à rebours
-    for i in range(10, 0, -1):
+    for i in range(5, 0, -1):
         suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
         await countdown_message.edit(embed=suspense_embed)
         await asyncio.sleep(1)
@@ -266,19 +266,15 @@ class GameView(discord.ui.View):
             active_games.pop(self.message_id, None)
 
 # --- COMMANDES ---
-@bot.tree.command(name="duel", description="Lancer une partie de Numéro Mystère.")
-@app_commands.describe(montant="Montant misé en kamas", joueurs="Nombre de joueurs (2 à 6)")
-async def startgame(interaction: discord.Interaction, montant: int, joueurs: int):
+@bot.tree.command(name="startgame", description="Lancer une partie de Numéro Mystère.")
+@app_commands.describe(montant="Montant misé en kamas")
+async def startgame(interaction: discord.Interaction, montant: int):
     if interaction.channel.id != ID_SALON_JEU:
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon numero-mystere.", ephemeral=True)
+        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🎲』dés.", ephemeral=True)
         return
 
     if montant <= 0:
         await interaction.response.send_message("❌ Le montant doit être supérieur à 0.", ephemeral=True)
-        return
-    
-    if not (2 <= joueurs <= 6):
-        await interaction.response.send_message("❌ Le nombre de joueurs doit être entre 2 et 6.", ephemeral=True)
         return
     
     # Vérifier si l'utilisateur est déjà dans une partie
@@ -287,16 +283,17 @@ async def startgame(interaction: discord.Interaction, montant: int, joueurs: int
             await interaction.response.send_message("❌ Tu participes déjà à une autre partie.", ephemeral=True)
             return
 
+    MAX_JOUEURS = 6
     embed = discord.Embed(
         title="🔮 Nouvelle Partie de Numéro Mystère",
         description=f"**{interaction.user.mention}** a lancé une partie pour **{montant:,.0f}".replace(",", " ") + " kamas** par personne.",
         color=discord.Color.gold()
     )
     embed.add_field(name="Joueurs inscrits", value="...", inline=False)
-    embed.add_field(name="Status", value=f"**0/{joueurs}** joueurs inscrits. En attente...", inline=False)
+    embed.add_field(name="Status", value=f"**0/{MAX_JOUEURS}** joueurs inscrits. En attente...", inline=False)
     embed.set_footer(text="Clique sur un numéro pour t'inscrire et faire un choix.")
 
-    view = GameView(None, joueurs, montant)
+    view = GameView(None, MAX_JOUEURS, montant)
     
     ping_content = ""
     role_membre = interaction.guild.get_role(ID_MEMBRE)
@@ -313,7 +310,7 @@ async def startgame(interaction: discord.Interaction, montant: int, joueurs: int
 
     sent_message = await interaction.original_response()
     view.message_id = sent_message.id
-    active_games[sent_message.id] = {"players": {}, "montant": montant, "croupier": None, "player_limit": joueurs}
+    active_games[sent_message.id] = {"players": {}, "montant": montant, "croupier": None, "player_limit": MAX_JOUEURS}
     await sent_message.edit(view=view)
 
 # --- STATS VIEWS AND COMMANDS ---
@@ -388,7 +385,7 @@ class StatsView(discord.ui.View):
 @bot.tree.command(name="statsall", description="Affiche les stats du jeu de Numéro Mystère.")
 async def statsall(interaction: discord.Interaction):
     if interaction.channel.id != ID_SALON_JEU:
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #numero-mystere.", ephemeral=True)
+        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🎲』dés.", ephemeral=True)
         return
 
     c.execute("""
