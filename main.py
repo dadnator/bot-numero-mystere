@@ -46,7 +46,6 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     montant = game_data["montant"]
     players = game_data["players"]
 
-    # 1. ENVOYER LE MESSAGE DE SUSPENSE
     suspense_embed = discord.Embed(
         title="🎲 Tirage en cours...",
         description="On croise les doigts 🤞🏻 !",
@@ -56,13 +55,11 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     
     countdown_message = await interaction.channel.send(embed=suspense_embed)
 
-    # 2. METTRE À JOUR LE MESSAGE AVEC LE COMPTE À REBOURS
     for i in range(5, 0, -1):
         suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
         await countdown_message.edit(embed=suspense_embed)
         await asyncio.sleep(1)
 
-    # 3. CALCULER LE RÉSULTAT
     mystery_number = random.randint(1, 6)
     
     min_diff = 7
@@ -105,17 +102,17 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     
     if len(winners) == 1:
         winner_user = bot.get_user(winners[0])
-        result_embed.add_field(name="🏆 Gagnant", value=f"{winner_user.mention} remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas !", inline=False)
+        if winner_user: # Vérification pour éviter l'erreur
+            result_embed.add_field(name="🏆 Gagnant", value=f"{winner_user.mention} remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas !", inline=False)
+        else:
+            result_embed.add_field(name="🏆 Gagnant", value="Gagnant non trouvé. Le croupier empoche la mise.", inline=False)
     elif len(winners) > 1:
         mentions = " ".join([f"<@{w_id}>" for w_id in winners])
         result_embed.add_field(name="🏆 Gagnants (Égalité)", value=f"{mentions} se partagent le gain et reçoivent **{format(win_per_person, ',').replace(',', ' ')}** kamas chacun.", inline=False)
     else:
         result_embed.add_field(name="🏆 Gagnant", value="Personne n'a gagné. Le croupier empoche la mise.", inline=False)
     
-    # 4. MODIFIER LE MESSAGE POUR AFFICHER LE RÉSULTAT FINAL
     await countdown_message.edit(embed=result_embed, view=None)
-    
-    # 5. SUPPRIMER LE MESSAGE ORIGINAL
     await original_message.delete()
     
     now = datetime.utcnow()
