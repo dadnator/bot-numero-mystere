@@ -137,42 +137,49 @@ class GameView(discord.ui.View):
     def add_number_buttons(self):
         self.clear_items()
         
-        # Création des boutons de numéros
         for i in range(1, 7):
             button = discord.ui.Button(label=str(i), style=discord.ButtonStyle.secondary, custom_id=f"number_{i}")
-            button.callback = self.choose_number_callback  # Utilisation d'une nouvelle fonction de rappel
+            
+            # Vérifier si le numéro est déjà choisi
             if i in self.chosen_numbers.values():
                 button.disabled = True
                 button.style = discord.ButtonStyle.danger
+            
             self.add_item(button)
 
-        # Ajout du bouton d'annulation
         cancel_button = discord.ui.Button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game")
-        cancel_button.callback = self.cancel_game_callback
         self.add_item(cancel_button)
 
-    async def choose_number_callback(self, interaction: discord.Interaction):
-        # Utiliser l'interaction pour obtenir le bouton qui a été cliqué
-        button = next((item for item in self.children if isinstance(item, discord.ui.Button) and item.custom_id == interaction.data['custom_id']), None)
-        if not button:
-            return
-
+    @discord.ui.button(label="1", style=discord.ButtonStyle.secondary, custom_id="number_1")
+    @discord.ui.button(label="2", style=discord.ButtonStyle.secondary, custom_id="number_2")
+    @discord.ui.button(label="3", style=discord.ButtonStyle.secondary, custom_id="number_3")
+    @discord.ui.button(label="4", style=discord.ButtonStyle.secondary, custom_id="number_4")
+    @discord.ui.button(label="5", style=discord.ButtonStyle.secondary, custom_id="number_5")
+    @discord.ui.button(label="6", style=discord.ButtonStyle.secondary, custom_id="number_6")
+    async def choose_number_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_id = interaction.user.id
         number = int(button.custom_id.split('_')[1])
         game_data = active_games.get(self.message_id)
 
-        if user_id in self.chosen_numbers.keys():
+        # Vérifier si le joueur a déjà choisi un numéro
+        if user_id in self.chosen_numbers:
             await interaction.response.send_message("❌ Tu as déjà choisi un numéro pour cette partie.", ephemeral=True)
             return
 
+        # Vérifier si le numéro est déjà pris
         if number in self.chosen_numbers.values():
-            await interaction.response.send_message("❌ Ce numéro est déjà pris. Choisi un autre numéro.", ephemeral=True)
+            await interaction.response.send_message("❌ Ce numéro est déjà pris. Choisis un autre numéro.", ephemeral=True)
             return
             
         self.chosen_numbers[user_id] = number
         game_data["players"][user_id] = {"user": interaction.user, "number": number}
 
-        self.add_number_buttons()
+        # Mettre à jour l'état des boutons
+        for item in self.children:
+            if isinstance(item, discord.ui.Button) and item.custom_id.startswith("number_"):
+                if int(item.custom_id.split('_')[1]) == number:
+                    item.disabled = True
+                    item.style = discord.ButtonStyle.danger
 
         embed = interaction.message.embeds[0]
         
@@ -182,12 +189,13 @@ class GameView(discord.ui.View):
         
         if len(game_data['players']) >= 2:
             self.clear_items()
-            self.add_item(discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier", callback=self.join_croupier_callback))
+            self.add_item(discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier"))
             embed.set_footer(text="Un croupier peut maintenant lancer la partie.")
 
         await interaction.response.edit_message(embed=embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
 
-    async def cancel_game_callback(self, interaction: discord.Interaction):
+    @discord.ui.button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game")
+    async def cancel_game_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         game_data = active_games.get(self.message_id)
         if interaction.user.id not in self.chosen_numbers.keys():
             await interaction.response.send_message("❌ Seuls les joueurs inscrits peuvent annuler la partie.", ephemeral=True)
@@ -202,7 +210,8 @@ class GameView(discord.ui.View):
 
         await interaction.response.edit_message(embed=embed, view=None, allowed_mentions=discord.AllowedMentions(users=True))
 
-    async def join_croupier_callback(self, interaction: discord.Interaction):
+    @discord.ui.button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier")
+    async def join_croupier_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         role_croupier = interaction.guild.get_role(ID_CROUPIER)
         
         if not role_croupier or role_croupier not in interaction.user.roles:
@@ -213,14 +222,15 @@ class GameView(discord.ui.View):
         game_data["croupier"] = interaction.user
         
         self.clear_items()
-        self.add_item(discord.ui.Button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button", callback=self.start_game_button_callback))
+        self.add_item(discord.ui.Button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button"))
         
         embed = interaction.message.embeds[0]
         embed.set_field_at(1, name="Status", value=f"✅ Prêt à jouer ! Croupier : {interaction.user.mention}", inline=False)
         
         await interaction.response.edit_message(embed=embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
         
-    async def start_game_button_callback(self, interaction: discord.Interaction):
+    @discord.ui.button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button")
+    async def start_game_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         game_data = active_games.get(self.message_id)
         
         if interaction.user.id != game_data["croupier"].id:
