@@ -11,9 +11,9 @@ from datetime import datetime
 # --- TOKEN ET INTENTS ---
 token = os.environ['TOKEN_BOT_DISCORD']
 
-ID_CROUPIER = 1406210029815861258
-ID_MEMBRE = 1406210131515019355
-ID_SALON_JEU = 1404445873236213820 # Remplace ID_SALON_DUEL
+ID_CROUPIER = 1401471414262829066
+ID_MEMBRE = 1366378672281620495
+ID_SALON_JEU = 1406920988993654794 # Remplace ID_SALON_DUEL
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
@@ -60,7 +60,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     countdown_message = await interaction.channel.send(embed=suspense_embed)
 
     # 3. Compte à rebours
-    for i in range(5, 0, -1):
+    for i in range(10, 0, -1):
         suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
         await countdown_message.edit(embed=suspense_embed)
         await asyncio.sleep(1)
@@ -266,11 +266,11 @@ class GameView(discord.ui.View):
             active_games.pop(self.message_id, None)
 
 # --- COMMANDES ---
-@bot.tree.command(name="startgame", description="Lancer une partie de Numéro Mystère.")
+@bot.tree.command(name="duel", description="Lancer une partie de Numéro Mystère.")
 @app_commands.describe(montant="Montant misé en kamas", joueurs="Nombre de joueurs (2 à 6)")
 async def startgame(interaction: discord.Interaction, montant: int, joueurs: int):
     if interaction.channel.id != ID_SALON_JEU:
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🎲』dés.", ephemeral=True)
+        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon numero-mystere.", ephemeral=True)
         return
 
     if montant <= 0:
@@ -388,7 +388,7 @@ class StatsView(discord.ui.View):
 @bot.tree.command(name="statsall", description="Affiche les stats du jeu de Numéro Mystère.")
 async def statsall(interaction: discord.Interaction):
     if interaction.channel.id != ID_SALON_JEU:
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🎲』dés.", ephemeral=True)
+        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #numero-mystere.", ephemeral=True)
         return
 
     c.execute("""
