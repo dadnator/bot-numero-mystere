@@ -128,6 +128,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
 
     active_games.pop(original_message.id, None)
 
+# --- VIEWS ET COMMANDES ---
 class GameView(discord.ui.View):
     def __init__(self, message_id, player_count, montant, creator_id):
         super().__init__(timeout=None)
@@ -142,18 +143,22 @@ class GameView(discord.ui.View):
     def add_number_buttons(self):
         self.clear_items()
         
+        # Boutons de numéros
         for i in range(1, 7):
             button = discord.ui.Button(label=str(i), style=discord.ButtonStyle.secondary, custom_id=f"number_{i}")
             button.callback = self.choose_number_callback
+            # Si un joueur a déjà choisi un numéro, on désactive le bouton correspondant
             if i in self.chosen_numbers.values():
                 button.disabled = True
                 button.style = discord.ButtonStyle.danger
             self.add_item(button)
 
+        # Bouton Annuler
         cancel_button = discord.ui.Button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game")
         cancel_button.callback = self.cancel_game_callback
         self.add_item(cancel_button)
         
+        # Bouton Croupier
         if len(self.chosen_numbers) >= 2 and not self.croupier:
             join_croupier_button = discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier")
             join_croupier_button.callback = self.join_croupier_callback
@@ -168,14 +173,22 @@ class GameView(discord.ui.View):
         number = int(button.custom_id.split('_')[1])
         game_data = active_games.get(self.message_id)
 
-        if user_id in self.chosen_numbers.keys():
+        # Vérification si le créateur doit encore choisir son numéro
+        if user_id != self.creator_id and self.creator_id in self.chosen_numbers and self.chosen_numbers[self.creator_id] is None:
+            await interaction.response.send_message("❌ Le créateur doit d'abord choisir son numéro.", ephemeral=True)
+            return
+
+        # Vérification si le joueur a déjà choisi un numéro
+        if user_id in self.chosen_numbers and self.chosen_numbers[user_id] is not None:
             await interaction.response.send_message("❌ Tu as déjà choisi un numéro pour cette partie.", ephemeral=True)
             return
 
+        # Vérification si le numéro est déjà pris
         if number in self.chosen_numbers.values():
-            await interaction.response.send_message("❌ Ce numéro est déjà pris. Choisi un autre numéro.", ephemeral=True)
+            await interaction.response.send_message("❌ Ce numéro est déjà pris. Choisis un autre numéro.", ephemeral=True)
             return
             
+        # Inscription et mise à jour des données
         self.chosen_numbers[user_id] = number
         game_data["players"][user_id] = {"user": interaction.user, "number": number}
 
@@ -183,7 +196,7 @@ class GameView(discord.ui.View):
 
         embed = interaction.message.embeds[0]
         
-        joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{p_data['number']}**" for p_data in game_data["players"].values()])
+        joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{p_data['number']}**" for p_data in game_data["players"].values() if p_data['number'] is not None])
         embed.set_field_at(0, name="Joueurs inscrits", value=joined_players_list if joined_players_list else "...", inline=False)
         embed.set_field_at(1, name="Status", value=f"**{len(game_data['players'])}/{self.player_count}** joueurs inscrits. En attente...", inline=False)
         
@@ -220,7 +233,7 @@ class GameView(discord.ui.View):
             self.add_number_buttons()
             
             embed = interaction.message.embeds[0]
-            joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{p_data['number']}**" for p_data in game_data["players"].values()])
+            joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{p_data['number']}**" for p_data in game_data["players"].values() if p_data['number'] is not None])
             embed.set_field_at(0, name="Joueurs inscrits", value=joined_players_list if joined_players_list else "...", inline=False)
             embed.set_field_at(1, name="Status", value=f"**{len(game_data['players'])}/{self.player_count}** joueurs inscrits. En attente...", inline=False)
             
@@ -232,7 +245,7 @@ class GameView(discord.ui.View):
                     del game_data["croupier"]
             
             await interaction.response.edit_message(content=f"**{interaction.user.mention}** a quitté la partie.", embed=embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
-
+            
     async def join_croupier_callback(self, interaction: discord.Interaction):
         role_croupier = interaction.guild.get_role(ID_CROUPIER)
         
@@ -302,16 +315,22 @@ async def startgame(interaction: discord.Interaction, montant: int):
             return
 
     MAX_JOUEURS = 6
+    
+    # Création des données de jeu et inscription automatique du créateur
+    game_data = {"players": {interaction.user.id: {"user": interaction.user, "number": None}}, "montant": montant, "croupier": None, "player_limit": MAX_JOUEURS}
+    
     embed = discord.Embed(
         title="🔮 Nouvelle Partie de Numéro Mystère",
         description=f"**{interaction.user.mention}** a lancé une partie pour **{montant:,.0f}".replace(",", " ") + " kamas** par personne.",
         color=discord.Color.gold()
     )
-    embed.add_field(name="Joueurs inscrits", value="...", inline=False)
-    embed.add_field(name="Status", value=f"**0/{MAX_JOUEURS}** joueurs inscrits. En attente...", inline=False)
-    embed.set_footer(text="Clique sur un numéro pour t'inscrire et faire un choix.")
+    # L'embed indique que le créateur est déjà inscrit
+    embed.add_field(name="Joueurs inscrits", value=f"{interaction.user.mention} (Créateur)", inline=False)
+    embed.add_field(name="Status", value=f"**1/{MAX_JOUEURS}** joueurs inscrits. En attente...", inline=False)
+    embed.set_footer(text="Le créateur choisit son numéro en premier.")
 
     view = GameView(None, MAX_JOUEURS, montant, interaction.user.id)
+    view.chosen_numbers[interaction.user.id] = None  # Le créateur est dans la liste mais sans numéro
     
     ping_content = ""
     role_membre = interaction.guild.get_role(ID_MEMBRE)
@@ -328,7 +347,7 @@ async def startgame(interaction: discord.Interaction, montant: int):
 
     sent_message = await interaction.original_response()
     view.message_id = sent_message.id
-    active_games[sent_message.id] = {"players": {}, "montant": montant, "croupier": None, "player_limit": MAX_JOUEURS}
+    active_games[sent_message.id] = game_data
     await sent_message.edit(view=view)
 
 # --- STATS VIEWS AND COMMANDS ---
