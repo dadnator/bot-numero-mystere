@@ -13,17 +13,15 @@ token = os.environ['TOKEN_BOT_DISCORD']
 
 ID_CROUPIER = 1401471414262829066
 ID_MEMBRE = 1366378672281620495
-ID_SALON_JEU = 1406920988993654794 # Remplace ID_SALON_DUEL
+ID_SALON_JEU = 1406920988993654794
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
-# Ce dictionnaire stockera les parties actives.
-# Clé : message_id, Valeur : {"players": {user_id: {"user": User, "number": int}}, "montant": int, "croupier": User}
 active_games = {}
 
 # --- CONNEXION À LA BASE DE DONNÉES ---
-conn = sqlite3.connect("game_stats.db") # Renommé la base de données
+conn = sqlite3.connect("game_stats.db")
 c = conn.cursor()
 c.execute("""
 CREATE TABLE IF NOT EXISTS games (
@@ -48,7 +46,6 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     montant = game_data["montant"]
     players = game_data["players"]
 
-    # 1. Créer un nouvel embed pour le suspense
     suspense_embed = discord.Embed(
         title="🎲 Tirage en cours...",
         description="On croise les doigts 🤞🏻 !",
@@ -56,16 +53,13 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     )
     suspense_embed.set_image(url="https://images.emojiterra.com/google/noto-emoji/animated-emoji/1f3b2.gif")
     
-    # 2. Envoyer un nouveau message avec l'embed de suspense
     countdown_message = await interaction.channel.send(embed=suspense_embed)
 
-    # 3. Compte à rebours
     for i in range(5, 0, -1):
         suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
         await countdown_message.edit(embed=suspense_embed)
         await asyncio.sleep(1)
 
-    # --- LOGIQUE DU JEU ---
     mystery_number = random.randint(1, 6)
     
     min_diff = 7
@@ -79,17 +73,12 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
         elif diff == min_diff:
             winners.append(player_id)
 
-    # Calculer les gains et la commission
     total_pot = montant * len(players)
-    commission_montant = int(total_pot * 0.05) # 5% de commission
+    commission_montant = int(total_pot * 0.05)
     net_pot = total_pot - commission_montant
     
-    if len(winners) > 0:
-        win_per_person = net_pot // len(winners)
-    else:
-        win_per_person = 0
+    win_per_person = net_pot // len(winners) if len(winners) > 0 else 0
 
-    # 4. Préparer l'embed du résultat
     result_embed = discord.Embed(title="🔮 Résultat du Numéro Mystère", color=discord.Color.green())
     result_embed.add_field(name="Le Numéro Mystère était...", value=f"**{mystery_number}**!", inline=False)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
@@ -120,18 +109,12 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     else:
         result_embed.add_field(name="🏆 Gagnant", value="Personne n'a gagné. Le croupier empoche la mise.", inline=False)
     
-    # 5. Modifier le message de suspense pour y mettre le résultat
     await countdown_message.edit(embed=result_embed, view=None)
-
-    # 6. Supprimer l'ancien message (celui avec les boutons)
     await original_message.delete()
     
-    # 7. Enregistrer les résultats dans la base de données
     now = datetime.utcnow()
     try:
         for player_id, data in players.items():
-            is_winner_flag = 1 if player_id in winners else 0
-            # Pour simplifier, on stocke un seul gagnant_id (le premier si égalité)
             winner_to_log = winners[0] if winners else None
             c.execute("INSERT INTO games (game_id, joueur_id, montant, numero_choisi, gagnant_id, numero_resultat, date) VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (original_message.id, player_id, montant, data['number'], winner_to_log, mystery_number, now))
@@ -141,31 +124,39 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
 
     active_games.pop(original_message.id, None)
 
-
 class GameView(discord.ui.View):
     def __init__(self, message_id, player_count, montant):
         super().__init__(timeout=None)
         self.message_id = message_id
         self.player_count = player_count
         self.montant = montant
-        self.chosen_numbers = {} # Clé : user_id, Valeur : numéro
+        self.chosen_numbers = {}
         self.croupier = None
         self.add_number_buttons()
 
     def add_number_buttons(self):
         self.clear_items()
         
+        # Création des boutons de numéros
         for i in range(1, 7):
             button = discord.ui.Button(label=str(i), style=discord.ButtonStyle.secondary, custom_id=f"number_{i}")
-            button.callback = self.choose_number
+            button.callback = self.choose_number_callback  # Utilisation d'une nouvelle fonction de rappel
             if i in self.chosen_numbers.values():
                 button.disabled = True
                 button.style = discord.ButtonStyle.danger
             self.add_item(button)
 
-        self.add_item(discord.ui.Button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game"))
-        
-    async def choose_number(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Ajout du bouton d'annulation
+        cancel_button = discord.ui.Button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game")
+        cancel_button.callback = self.cancel_game_callback
+        self.add_item(cancel_button)
+
+    async def choose_number_callback(self, interaction: discord.Interaction):
+        # Utiliser l'interaction pour obtenir le bouton qui a été cliqué
+        button = next((item for item in self.children if isinstance(item, discord.ui.Button) and item.custom_id == interaction.data['custom_id']), None)
+        if not button:
+            return
+
         user_id = interaction.user.id
         number = int(button.custom_id.split('_')[1])
         game_data = active_games.get(self.message_id)
@@ -174,7 +165,6 @@ class GameView(discord.ui.View):
             await interaction.response.send_message("❌ Tu as déjà choisi un numéro pour cette partie.", ephemeral=True)
             return
 
-        # Vérifier si le numéro est déjà pris
         if number in self.chosen_numbers.values():
             await interaction.response.send_message("❌ Ce numéro est déjà pris. Choisi un autre numéro.", ephemeral=True)
             return
@@ -182,10 +172,8 @@ class GameView(discord.ui.View):
         self.chosen_numbers[user_id] = number
         game_data["players"][user_id] = {"user": interaction.user, "number": number}
 
-        # Mettre à jour les boutons de la vue
         self.add_number_buttons()
 
-        # Mettre à jour l'embed pour montrer qui a rejoint et quel numéro ils ont choisi
         embed = interaction.message.embeds[0]
         
         joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{p_data['number']}**" for p_data in game_data["players"].values()])
@@ -194,13 +182,12 @@ class GameView(discord.ui.View):
         
         if len(game_data['players']) >= 2:
             self.clear_items()
-            self.add_item(discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier"))
+            self.add_item(discord.ui.Button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier", callback=self.join_croupier_callback))
             embed.set_footer(text="Un croupier peut maintenant lancer la partie.")
 
         await interaction.response.edit_message(embed=embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
-    
-    @discord.ui.button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game")
-    async def cancel_game(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+    async def cancel_game_callback(self, interaction: discord.Interaction):
         game_data = active_games.get(self.message_id)
         if interaction.user.id not in self.chosen_numbers.keys():
             await interaction.response.send_message("❌ Seuls les joueurs inscrits peuvent annuler la partie.", ephemeral=True)
@@ -215,8 +202,7 @@ class GameView(discord.ui.View):
 
         await interaction.response.edit_message(embed=embed, view=None, allowed_mentions=discord.AllowedMentions(users=True))
 
-    @discord.ui.button(label="🤝 Rejoindre en tant que Croupier", style=discord.ButtonStyle.secondary, custom_id="join_croupier")
-    async def join_croupier(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def join_croupier_callback(self, interaction: discord.Interaction):
         role_croupier = interaction.guild.get_role(ID_CROUPIER)
         
         if not role_croupier or role_croupier not in interaction.user.roles:
@@ -227,15 +213,14 @@ class GameView(discord.ui.View):
         game_data["croupier"] = interaction.user
         
         self.clear_items()
-        self.add_item(discord.ui.Button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button"))
+        self.add_item(discord.ui.Button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button", callback=self.start_game_button_callback))
         
         embed = interaction.message.embeds[0]
         embed.set_field_at(1, name="Status", value=f"✅ Prêt à jouer ! Croupier : {interaction.user.mention}", inline=False)
         
         await interaction.response.edit_message(embed=embed, view=self, allowed_mentions=discord.AllowedMentions(users=True))
         
-    @discord.ui.button(label="🎰 Lancer la partie !", style=discord.ButtonStyle.success, custom_id="start_game_button")
-    async def start_game_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def start_game_button_callback(self, interaction: discord.Interaction):
         game_data = active_games.get(self.message_id)
         
         if interaction.user.id != game_data["croupier"].id:
@@ -277,7 +262,6 @@ async def startgame(interaction: discord.Interaction, montant: int):
         await interaction.response.send_message("❌ Le montant doit être supérieur à 0.", ephemeral=True)
         return
     
-    # Vérifier si l'utilisateur est déjà dans une partie
     for message_id, game_data in active_games.items():
         if interaction.user.id in game_data["players"].keys():
             await interaction.response.send_message("❌ Tu participes déjà à une autre partie.", ephemeral=True)
