@@ -55,27 +55,16 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     
     countdown_message = await interaction.channel.send(embed=suspense_embed)
 
-    # Boucle de relance pour garantir un gagnant
     while True:
-        # Compte à rebours
         for i in range(5, 0, -1):
             suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
             await countdown_message.edit(embed=suspense_embed)
             await asyncio.sleep(1)
 
         mystery_number = random.randint(1, 6)
+        winners = [player_id for player_id, data in players.items() if data['number'] == mystery_number]
         
-        min_diff = 7
-        winners = []
-        winner_found = False
-
-        for player_id, data in players.items():
-            if data['number'] == mystery_number:
-                winners = [player_id]
-                winner_found = True
-                break
-        
-        if winner_found:
+        if winners:
             break
         
         suspense_embed.description = f"Le numéro tiré était **{mystery_number}**. Personne n'a choisi ce numéro. Relance du dé !"
@@ -109,12 +98,11 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     result_embed.add_field(name="💸 Commission (5%)", value=f"**{format(commission_montant, ',').replace(',', ' ')}** kamas", inline=True)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
     
+    # La logique a été corrigée ici
     if len(winners) == 1:
         winner_user = bot.get_user(winners[0])
         if winner_user:
             result_embed.add_field(name="🏆 Gagnant", value=f"{winner_user.mention} remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas !", inline=False)
-        else:
-            result_embed.add_field(name="🏆 Gagnant", value="Gagnant non trouvé. Le croupier empoche la mise.", inline=False)
     elif len(winners) > 1:
         mentions = " ".join([f"<@{w_id}>" for w_id in winners])
         result_embed.add_field(name="🏆 Gagnants (Égalité)", value=f"{mentions} se partagent le gain et reçoivent **{format(win_per_person, ',').replace(',', ' ')}** kamas chacun.", inline=False)
