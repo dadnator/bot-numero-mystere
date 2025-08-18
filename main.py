@@ -165,9 +165,9 @@ class GameView(discord.ui.View):
 
         self.add_item(discord.ui.Button(label="❌ Annuler", style=discord.ButtonStyle.red, custom_id="cancel_game"))
         
-    async def choose_number(self, interaction: discord.Interaction):
+    async def choose_number(self, interaction: discord.Interaction, button: discord.ui.Button):
         user_id = interaction.user.id
-        number = int(interaction.custom_id.split('_')[1])
+        number = int(button.custom_id.split('_')[1])
         game_data = active_games.get(self.message_id)
 
         if user_id in self.chosen_numbers.keys():
@@ -266,7 +266,7 @@ class GameView(discord.ui.View):
             active_games.pop(self.message_id, None)
 
 # --- COMMANDES ---
-@bot.tree.command(name="startgame", description="Lancer une partie de Numéro Mystère.")
+@bot.tree.command(name="duel", description="Lancer une partie de Numéro Mystère.")
 @app_commands.describe(montant="Montant misé en kamas")
 async def startgame(interaction: discord.Interaction, montant: int):
     if interaction.channel.id != ID_SALON_JEU:
