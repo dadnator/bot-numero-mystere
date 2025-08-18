@@ -43,90 +43,90 @@ async def on_app_command_error(interaction: discord.Interaction, error):
         await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
 
 async def end_game(interaction: discord.Interaction, game_data, original_message):
-    montant = game_data["montant"]
-    players = game_data["players"]
+    montant = game_data["montant"]
+    players = game_data["players"]
 
-    suspense_embed = discord.Embed(
-        title="🎲 Tirage en cours...",
-        description="On croise les doigts 🤞🏻 !",
-        color=discord.Color.greyple()
-    )
-    suspense_embed.set_image(url="https://images.emojiterra.com/google/noto-emoji/animated-emoji/1f3b2.gif")
-    
-    countdown_message = await interaction.channel.send(embed=suspense_embed)
+    suspense_embed = discord.Embed(
+        title="🎲 Tirage en cours...",
+        description="On croise les doigts 🤞🏻 !",
+        color=discord.Color.greyple()
+    )
+    suspense_embed.set_image(url="https://images.emojiterra.com/google/noto-emoji/animated-emoji/1f3b2.gif")
+    
+    countdown_message = await interaction.channel.send(embed=suspense_embed)
 
-    while True:
-        for i in range(5, 0, -1):
-            suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
-            await countdown_message.edit(embed=suspense_embed)
-            await asyncio.sleep(1)
+    while True:
+        for i in range(5, 0, -1):
+            suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
+            await countdown_message.edit(embed=suspense_embed)
+            await asyncio.sleep(1)
 
-        mystery_number = random.randint(1, 6)
-        winners = [player_id for player_id, data in players.items() if data['number'] == mystery_number]
-        
-        if winners:
-            break
-        
-        suspense_embed.description = f"Le numéro tiré était **{mystery_number}**. Personne n'a choisi ce numéro. Relance du dé !"
-        await countdown_message.edit(embed=suspense_embed)
-        await asyncio.sleep(2)
+        mystery_number = random.randint(1, 6)
+        winners = [player_id for player_id, data in players.items() if data['number'] == mystery_number]
+        
+        if winners:
+            break
+        
+        suspense_embed.description = f"Le numéro tiré était **{mystery_number}**. Personne n'a choisi ce numéro. Relance du dé !"
+        await countdown_message.edit(embed=suspense_embed)
+        await asyncio.sleep(2)
 
-    total_pot = montant * len(players)
-    commission_montant = int(total_pot * 0.05)
-    net_pot = total_pot - commission_montant
-    
-    win_per_person = net_pot // len(winners) if len(winners) > 0 else 0
+    total_pot = montant * len(players)
+    commission_montant = int(total_pot * 0.05)
+    net_pot = total_pot - commission_montant
+    
+    win_per_person = net_pot // len(winners) if len(winners) > 0 else 0
 
-    result_embed = discord.Embed(title="🔮 Résultat du Numéro Mystère", color=discord.Color.green())
-    result_embed.add_field(name="Le Numéro Mystère était...", value=f"**{mystery_number}**!", inline=False)
-    result_embed.add_field(name=" ", value="─" * 20, inline=False)
+    result_embed = discord.Embed(title="🔮 Résultat du Numéro Mystère", color=discord.Color.green())
+    result_embed.add_field(name="Le Numéro Mystère était...", value=f"**{mystery_number}**!", inline=False)
+    result_embed.add_field(name=" ", value="─" * 20, inline=False)
 
-    for player_id, data in players.items():
-        user = data['user']
-        number = data['number']
-        is_winner = player_id in winners
-        
-        status_emoji = "✅" if is_winner else "❌"
-        status_text = f"**Gagné!** ({format(win_per_person, ',').replace(',', ' ')} kamas)" if is_winner else "**Perdu**"
-        
-        result_embed.add_field(name=f"{status_emoji} {user.display_name}", 
-                                value=f"A choisi : **{number}** | {status_text}", 
-                                inline=False)
+    for player_id, data in players.items():
+        user = data['user']
+        number = data['number']
+        is_winner = player_id in winners
+        
+        status_emoji = "✅" if is_winner else "❌"
+        status_text = f"**Gagné!** ({format(win_per_person, ',').replace(',', ' ')} kamas)" if is_winner else "**Perdu**"
+        
+        result_embed.add_field(name=f"{status_emoji} {user.display_name}", 
+                                value=f"A choisi : **{number}** | {status_text}", 
+                                inline=False)
 
-    result_embed.add_field(name=" ", value="─" * 20, inline=False)
-    result_embed.add_field(name="💰 Montant Total du Pot", value=f"**{format(total_pot, ',').replace(',', ' ')}** kamas", inline=True)
-    result_embed.add_field(name="💸 Commission (5%)", value=f"**{format(commission_montant, ',').replace(',', ' ')}** kamas", inline=True)
-    result_embed.add_field(name=" ", value="─" * 20, inline=False)
-    
-    if len(winners) == 1:
-        winner_user = None
-        try:
-            winner_user = await bot.fetch_user(winners[0])
-        except discord.NotFound:
-            pass
-        
-        if winner_user:
-            result_embed.add_field(name="🏆 Gagnant", value=f"{winner_user.mention} remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas !", inline=False)
-        else:
-            result_embed.add_field(name="🏆 Gagnant", value=f"<@{winners[0]}> remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas ! (Utilisateur introuvable)", inline=False)
-    elif len(winners) > 1:
-        mentions = " ".join([f"<@{w_id}>" for w_id in winners])
-        result_embed.add_field(name="🏆 Gagnants (Égalité)", value=f"{mentions} se partagent le gain et reçoivent **{format(win_per_person, ',').replace(',', ' ')}** kamas chacun.", inline=False)
-    
-    await countdown_message.edit(embed=result_embed, view=None)
-    await original_message.delete()
-    
-    now = datetime.utcnow()
-    try:
-        for player_id, data in players.items():
-            winner_to_log = winners[0] if winners else None
-            c.execute("INSERT INTO games (game_id, joueur_id, montant, numero_choisi, gagnant_id, numero_resultat, date) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (original_message.id, player_id, montant, data['number'], winner_to_log, mystery_number, now))
-        conn.commit()
-    except Exception as e:
-        print("Erreur base de données:", e)
+    result_embed.add_field(name=" ", value="─" * 20, inline=False)
+    result_embed.add_field(name="💰 Montant Total du Pot", value=f"**{format(total_pot, ',').replace(',', ' ')}** kamas", inline=True)
+    result_embed.add_field(name="💸 Commission (5%)", value=f"**{format(commission_montant, ',').replace(',', ' ')}** kamas", inline=True)
+    result_embed.add_field(name=" ", value="─" * 20, inline=False)
+    
+    if len(winners) == 1:
+        winner_user = None
+        try:
+            winner_user = await bot.fetch_user(winners[0])
+        except discord.NotFound:
+            pass
 
-    active_games.pop(original_message.id, None)
+        if winner_user:
+            result_embed.add_field(name="🏆 Gagnant", value=f"{winner_user.mention} remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas !", inline=False)
+        else:
+            result_embed.add_field(name="🏆 Gagnant", value=f"<@{winners[0]}> remporte **{format(win_per_person, ',').replace(',', ' ')}** kamas ! (Utilisateur introuvable)", inline=False)
+    elif len(winners) > 1:
+        mentions = " ".join([f"<@{w_id}>" for w_id in winners])
+        result_embed.add_field(name="🏆 Gagnants (Égalité)", value=f"{mentions} se partagent le gain et reçoivent **{format(win_per_person, ',').replace(',', ' ')}** kamas chacun.", inline=False)
+    
+    await countdown_message.edit(embed=result_embed, view=None)
+    await original_message.delete()
+    
+    now = datetime.utcnow()
+    try:
+        for player_id, data in players.items():
+            winner_to_log = winners[0] if winners else None
+            c.execute("INSERT INTO games (game_id, joueur_id, montant, numero_choisi, gagnant_id, numero_resultat, date) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (original_message.id, player_id, montant, data['number'], winner_to_log, mystery_number, now))
+        conn.commit()
+    except Exception as e:
+        print("Erreur base de données:", e)
+
+    active_games.pop(original_message.id, None)
 
 class GameView(discord.ui.View):
     def __init__(self, message_id, player_count, montant, creator_id):
