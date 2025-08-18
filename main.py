@@ -98,7 +98,6 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     result_embed.add_field(name="💸 Commission (5%)", value=f"**{format(commission_montant, ',').replace(',', ' ')}** kamas", inline=True)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
     
-    # La logique a été corrigée ici
     if len(winners) == 1:
         winner_user = bot.get_user(winners[0])
         if winner_user:
