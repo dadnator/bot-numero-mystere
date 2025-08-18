@@ -39,8 +39,8 @@ conn.commit()
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error):
-        if isinstance(error, app_commands.CheckFailure):
-            await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
+    if isinstance(error, app_commands.CheckFailure):
+        await interaction.response.send_message("❌ Tu n'as pas la permission d'utiliser cette commande.", ephemeral=True)
 
 async def end_game(interaction: discord.Interaction, game_data, original_message):
     montant = game_data["montant"]
