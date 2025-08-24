@@ -78,7 +78,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     win_per_person = net_pot // len(winners) if len(winners) > 0 else 0
 
     result_embed = discord.Embed(title="🔮 Résultat du Numéro Mystère", color=discord.Color.green())
-    result_embed.add_field(name="Le Numéro Mystère était...", value=f"**{mystery_number}**!", inline=False)
+    result_embed.add_field(name="Le Numéro Mystère est", value=f"**{mystery_number}** !", inline=False)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
 
     for player_id, data in players.items():
