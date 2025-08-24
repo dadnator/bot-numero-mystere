@@ -88,7 +88,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     win_per_person = net_pot // len(winners) if len(winners) > 0 else 0
 
     result_embed = discord.Embed(title="🔮 Résultat du Numéro Mystère", color=discord.Color.green())
-    result_embed.add_field(name="Le Numéro Mystère est", value=f"**{EMOJI_MAPPING[mystery_number]}** !", inline=False)
+    result_embed.add_field(name="Le Numéro Mystère est :", value=f"**{EMOJI_MAPPING[mystery_number]}** ", inline=False)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
 
     for player_id, data in players.items():
@@ -97,14 +97,14 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
         is_winner = player_id in winners
         
         status_emoji = "✅" if is_winner else "❌"
-        status_text = f"**Gagné!** ({format(win_per_person, ',').replace(',', ' ')} kamas)" if is_winner else "**Perdu**"
+        status_text = f"**Gagné !**" if is_winner else "**Perdu**"
         
         result_embed.add_field(name=f"{status_emoji} {user.display_name}", 
                                 value=f"A choisi : **{EMOJI_MAPPING[number]}** | {status_text}", 
                                 inline=False)
 
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
-    result_embed.add_field(name="💰 Montant Total du Pot", value=f"**{format(total_pot, ',').replace(',', ' ')}** kamas", inline=True)
+    result_embed.add_field(name="💰 Montant Total Misé", value=f"**{format(total_pot, ',').replace(',', ' ')}** kamas", inline=True)
     result_embed.add_field(name="💸 Commission (5%)", value=f"**{format(commission_montant, ',').replace(',', ' ')}** kamas", inline=True)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
     
