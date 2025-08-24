@@ -67,7 +67,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
 
     while True:
         for i in range(5, 0, -1):
-            suspense_embed.description = f"Le résultat sera révélé dans {i} secondes..."
+            suspense_embed.description = f"On croise les doigts 🤞🏻 !"
             await countdown_message.edit(embed=suspense_embed)
             await asyncio.sleep(1)
 
@@ -77,9 +77,9 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
         if winners:
             break
         
-        suspense_embed.description = f"Le numéro tiré était **{EMOJI_MAPPING[mystery_number]}**. Personne n'a choisi ce numéro. Relance du dé !"
+        suspense_embed.description = f"Le numéro tiré est **{EMOJI_MAPPING[mystery_number]}**.Pas de gagnant . Relance du dé !"
         await countdown_message.edit(embed=suspense_embed)
-        await asyncio.sleep(2)
+        await asyncio.sleep(4)
 
     total_pot = montant * len(players)
     commission_montant = int(total_pot * 0.05)
