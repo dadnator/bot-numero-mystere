@@ -20,6 +20,16 @@ bot = commands.Bot(command_prefix="/", intents=intents)
 
 active_games = {}
 
+# --- ÉMOJIS ---
+EMOJI_MAPPING = {
+    1: "1️⃣",
+    2: "2️⃣",
+    3: "3️⃣",
+    4: "4️⃣",
+    5: "5️⃣",
+    6: "6️⃣"
+}
+
 # --- CONNEXION À LA BASE DE DONNÉES ---
 conn = sqlite3.connect("game_stats.db")
 c = conn.cursor()
@@ -67,7 +77,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
         if winners:
             break
         
-        suspense_embed.description = f"Le numéro tiré était **{mystery_number}**. Personne n'a choisi ce numéro. Relance du dé !"
+        suspense_embed.description = f"Le numéro tiré était **{EMOJI_MAPPING[mystery_number]}**. Personne n'a choisi ce numéro. Relance du dé !"
         await countdown_message.edit(embed=suspense_embed)
         await asyncio.sleep(2)
 
@@ -78,7 +88,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
     win_per_person = net_pot // len(winners) if len(winners) > 0 else 0
 
     result_embed = discord.Embed(title="🔮 Résultat du Numéro Mystère", color=discord.Color.green())
-    result_embed.add_field(name="Le Numéro Mystère est", value=f"**{mystery_number}** !", inline=False)
+    result_embed.add_field(name="Le Numéro Mystère est", value=f"**{EMOJI_MAPPING[mystery_number]}** !", inline=False)
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
 
     for player_id, data in players.items():
@@ -90,7 +100,7 @@ async def end_game(interaction: discord.Interaction, game_data, original_message
         status_text = f"**Gagné!** ({format(win_per_person, ',').replace(',', ' ')} kamas)" if is_winner else "**Perdu**"
         
         result_embed.add_field(name=f"{status_emoji} {user.display_name}", 
-                                value=f"A choisi : **{number}** | {status_text}", 
+                                value=f"A choisi : **{EMOJI_MAPPING[number]}** | {status_text}", 
                                 inline=False)
 
     result_embed.add_field(name=" ", value="─" * 20, inline=False)
@@ -145,7 +155,8 @@ class GameView(discord.ui.View):
         
         # Boutons de numéros
         for i in range(1, 7):
-            button = discord.ui.Button(label=str(i), style=discord.ButtonStyle.secondary, custom_id=f"number_{i}")
+            emoji_label = EMOJI_MAPPING[i]
+            button = discord.ui.Button(label=emoji_label, style=discord.ButtonStyle.secondary, custom_id=f"number_{i}")
             button.callback = self.choose_number_callback
             # Si un joueur a déjà choisi un numéro, on désactive le bouton correspondant
             if i in self.chosen_numbers.values():
@@ -196,7 +207,7 @@ class GameView(discord.ui.View):
 
         embed = interaction.message.embeds[0]
         
-        joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{p_data['number']}**" for p_data in game_data["players"].values() if p_data['number'] is not None])
+        joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{EMOJI_MAPPING[p_data['number']]}**" for p_data in game_data["players"].values() if p_data['number'] is not None])
         embed.set_field_at(0, name="Joueurs inscrits", value=joined_players_list if joined_players_list else "...", inline=False)
         embed.set_field_at(1, name="Status", value=f"**{len(game_data['players'])}/{self.player_count}** joueurs inscrits. En attente...", inline=False)
         
@@ -233,7 +244,7 @@ class GameView(discord.ui.View):
             self.add_number_buttons()
             
             embed = interaction.message.embeds[0]
-            joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{p_data['number']}**" for p_data in game_data["players"].values() if p_data['number'] is not None])
+            joined_players_list = "\n".join([f"{p_data['user'].mention} a choisi le numéro **{EMOJI_MAPPING[p_data['number']]}**" for p_data in game_data["players"].values() if p_data['number'] is not None])
             embed.set_field_at(0, name="Joueurs inscrits", value=joined_players_list if joined_players_list else "...", inline=False)
             embed.set_field_at(1, name="Status", value=f"**{len(game_data['players'])}/{self.player_count}** joueurs inscrits. En attente...", inline=False)
             
