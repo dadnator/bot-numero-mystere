@@ -11,9 +11,9 @@ from datetime import datetime
 # --- TOKEN ET INTENTS ---
 token = os.environ['TOKEN_BOT_DISCORD']
 
-ID_CROUPIER = 1401471414262829066
-ID_MEMBRE = 1366378672281620495
-ID_SALON_JEU = 1406920988993654794
+ID_CROUPIER = 1406210029815861258
+ID_MEMBRE = 1406210131515019355
+ID_SALON_JEU = 1406567709956898837
 
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="/", intents=intents)
@@ -313,7 +313,7 @@ class GameView(discord.ui.View):
 @app_commands.describe(montant="Montant misé en kamas")
 async def startgame(interaction: discord.Interaction, montant: int):
     if interaction.channel.id != ID_SALON_JEU:
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🎲』dés.", ephemeral=True)
+        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🔮』numéro•mystère.", ephemeral=True)
         return
 
     if montant <= 0:
@@ -433,7 +433,7 @@ class StatsView(discord.ui.View):
 @bot.tree.command(name="statsall", description="Affiche les stats du jeu de Numéro Mystère.")
 async def statsall(interaction: discord.Interaction):
     if interaction.channel.id != ID_SALON_JEU:
-        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🎲』dés.", ephemeral=True)
+        await interaction.response.send_message("❌ Cette commande ne peut être utilisée que dans le salon #『🔮』numéro•mystère.", ephemeral=True)
         return
 
     c.execute("""
